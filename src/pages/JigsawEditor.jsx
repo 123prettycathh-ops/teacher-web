@@ -205,19 +205,45 @@ export default function JigsawEditor() {
     setLesson({ img: URL.createObjectURL(f) });
   }
 
+  // Shrink a picture and turn it into a data URL (used when Cloud Storage blocks the upload).
+  function toDataUrl(file, max = 600, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => {
+        const scale = Math.min(1, max / Math.max(im.width, im.height));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(im.width * scale));
+        c.height = Math.max(1, Math.round(im.height * scale));
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL("image/jpeg", quality));
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not read this picture. Try a JPG or PNG.")); };
+      im.src = url;
+    });
+  }
+
   // Upload to Cloud Storage and get a public https URL the mobile app can open.
+  // If Cloud Storage blocks the browser (CORS), fall back to a small embedded picture
+  // so the activity still saves and reaches the main admin and the mobile app.
   async function uploadImage(file, categoryKey) {
-    const signed = await api("/media/upload-url", {
-      method: "POST",
-      body: { purpose: "category-image", contentType: file.type, categoryKey },
-    });
-    const res = await fetch(signed.uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type, ...(signed.requiredHeaders || {}) },
-      body: file,
-    });
-    if (!res.ok) throw new Error("Picture upload failed (" + res.status + ")");
-    return signed.publicUrl;
+    try {
+      const signed = await api("/media/upload-url", {
+        method: "POST",
+        body: { purpose: "category-image", contentType: file.type, categoryKey },
+      });
+      const res = await fetch(signed.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type, ...(signed.requiredHeaders || {}) },
+        body: file,
+      });
+      if (!res.ok) throw new Error("Picture upload failed (" + res.status + ")");
+      return signed.publicUrl;
+    } catch (e) {
+      console.warn("Cloud Storage upload failed, saving an embedded picture instead:", e);
+      return await toDataUrl(file);
+    }
   }
 
   // Turn a category from the server into this editor's draft shape.
@@ -265,7 +291,7 @@ export default function JigsawEditor() {
       const imageUrl = files[k] ? await uploadImage(files[k], catId) : cur.img;
       const id = cur.id || crypto.randomUUID();
       const item = {
-        id, title: cur.name.trim(), imageUrl,
+        id, title: cur.name.trim() || ("Level " + lvl + " · Activity " + act), imageUrl,
         definition_en: cur.en.trim() || null, definition_tl: cur.tl.trim() || null,
         context_en: cur.lessonEn.trim() || null, context_tl: cur.lessonTl.trim() || null,
       };
