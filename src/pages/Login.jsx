@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../firebase";
 import { api } from "../api";
+import { saveSession } from "../session";
 import { LangToggle, useLang } from "../i18n";
 import ConfirmDialog from "../components/ConfirmDialog";
 
@@ -326,7 +327,7 @@ export default function Login() {
       if (user.disabled) throw new Error(t("e_disabled"));
 
       // Show the "Logged In" dialog first. The real sign-in happens on Continue.
-      setWelcome({ name: user.name, email: user.email, password });
+      setWelcome({ name: user.name, email: user.email, password, session });
     } catch (err) {
       console.error(err);
       if (err.status === 401) setError(t("e_wrongpw"));
@@ -342,11 +343,12 @@ export default function Login() {
     try {
       await signInWithEmailAndPassword(auth, welcome.email, welcome.password);
     } catch (err) {
-      console.error(err);
-      setWelcome(null);
-      setError(t("e_wrongpw"));
-      await signOut(auth).catch(() => {});
+      // The backend already accepted this password, so this is not a wrong password.
+      // Carry on with the saved backend login below.
+      console.warn("Firebase sign-in failed, using the saved login instead:", err);
     }
+    // Save the login so a page refresh keeps the teacher signed in.
+    if (welcome.session) saveSession(welcome.session);
     setLoading(false);
   }
 

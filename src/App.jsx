@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
+import { getSession, onSessionChange, clearSession } from "./session";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
@@ -15,14 +16,18 @@ import JigsawEditor from "./pages/JigsawEditor";
 export default function App() {
   const [user, setUser] = useState(undefined);
   const [demo, setDemo] = useState(false);
+  const [session, setSessionState] = useState(getSession());
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUser(u)), []);
+  useEffect(() => onSessionChange(setSessionState), []);
 
-  if (user === undefined) return <p style={{ padding: 20 }}>Loading...</p>;
+  // Wait for Firebase only when there is no saved login to use.
+  if (user === undefined && !session) return <p style={{ padding: 20 }}>Loading...</p>;
 
-  const loggedIn = !!user || demo;
+  const loggedIn = !!user || demo || !!session;
 
   async function logout() {
+    clearSession();
     await signOut(auth).catch(() => {});
     setDemo(false);
   }
