@@ -150,7 +150,7 @@ export default function QuestionEditor() {
   const { lang, t } = useLang();
   const { packId, catId, level, n } = useParams();
   const go = useNavigate();
-  const { packs } = useOutletContext();
+  const { packs, refreshPacks } = useOutletContext();
   const pack = packs.find((p) => p.id === packId);
   const cat = CATS.find((c) => c.id === catId) ?? CATS[0];
   const path = `/packs/${packId}/questions/${cat.id}/${level}/${n}`;
@@ -218,6 +218,7 @@ export default function QuestionEditor() {
     setBusy(true);
     try {
       await api(path, { method: "PUT", body: toApi(d) });
+      refreshPacks?.();
       setNote("Saved.");
       setTimeout(() => go(backTo), 600);
     } catch (e) { setErr(e.message); }

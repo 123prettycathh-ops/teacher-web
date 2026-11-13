@@ -46,6 +46,17 @@ export default function Dashboard({ onLogout }) {
     setLoading(false);
   }, []);
 
+  // Refresh packs + class WITHOUT the loading screen, so open editors are not unmounted.
+  const refreshPacks = useCallback(async () => {
+    try {
+      const [classes, packList] = await Promise.all([api("/classes/mine"), api("/packs?mine=true")]);
+      const cls = asList(classes)[0] ?? null;
+      setKlass(cls);
+      setPacks(asList(packList).map(toUiPack));
+      setActivePackId(cls?.packId ?? null);
+    } catch (e) { console.error(e); }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
 
   // When the teacher changes the profile picture in the mobile app,
@@ -57,7 +68,7 @@ export default function Dashboard({ onLogout }) {
   }, []);
 
   const ctx = {
-    me, klass, setKlass, reload: load,
+    me, klass, setKlass, reload: load, refreshPacks,
     packs, setPacks, activePackId, setActivePackId,
     students, setStudents,
     quizData, setQuizData, quizLevels, setQuizLevels, lessonOn, setLessonOn,

@@ -169,7 +169,7 @@ export default function ActivityManagement() {
                   <button className="am-btn blue" onClick={() => go("/dashboard/activity-management/" + p.id + "/quiz")}>{t("edit_quiz")}</button>
                   <button className="am-btn purple" onClick={() => go("/dashboard/activity-management/" + p.id + "/jigsaw")}>{t("edit_jigsaw")}</button>
                   <button className="am-btn gray" disabled={busy} onClick={() => copy(p)}>{t("copy")}</button>
-                  {p.status === "draft" && <button className="am-btn green" disabled={busy} onClick={() => publish(p)}>{t("publish")}</button>}
+                  {p.status !== "live" && p.status !== "archived" && <button className="am-btn green" disabled={busy} onClick={() => publish(p)}>{t("publish")}</button>}
                   {p.status !== "archived" && <button className="am-btn red" disabled={busy} onClick={() => archive(p)}>{t("archive")}</button>}
                   <button className="am-btn outline" disabled={busy} onClick={() => remove(p)}>Delete</button>
                 </div>

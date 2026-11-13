@@ -162,7 +162,7 @@ const CSS = `
 export default function JigsawEditor() {
   const navigate = useNavigate();
   const { packId } = useParams();
-  const { packs } = useOutletContext();
+  const { packs, refreshPacks } = useOutletContext();
   const pack = packs.find((p) => p.id === packId);
 
   const [catId, setCatId] = useState(CATS[0].id);
@@ -277,7 +277,8 @@ export default function JigsawEditor() {
       const res = await api(`/packs/${packId}/categories/${catId}/jigsaws`, { method: "PUT", body: { items, slots, pieces } });
       applyCategory({ ...base, jigsaws: res.items, jigsawSlots: res.slots, jigsawPieces: res.pieces });
       setFiles((f) => { const n = { ...f }; delete n[k]; return n; });
-      setSaved("Saved. Students will see this in the mobile app.");
+      refreshPacks?.();
+      setSaved("Saved to this pack. To show it to students: Publish the pack, then assign it in Class Content.");
     } catch (e) { setErr(e.message); }
     setBusy(false);
   }
@@ -300,7 +301,8 @@ export default function JigsawEditor() {
       const res = await api(`/packs/${packId}/categories/${catId}/jigsaws`, { method: "PUT", body: { items, slots, pieces } });
       dropLocal();
       applyCategory({ ...base, jigsaws: res.items, jigsawSlots: res.slots, jigsawPieces: res.pieces });
-      setSaved("Removed. Students will see the category picture in the mobile app.");
+      refreshPacks?.();
+      setSaved("Removed from this pack. Publish the pack again so students see the change.");
     } catch (e) { setErr(e.message); }
     setBusy(false);
   }
@@ -320,6 +322,7 @@ export default function JigsawEditor() {
       setLessonFiles((f) => { const n = { ...f }; delete n[catId]; return n; });
       if (base) setServer({ ...server, [catId]: { ...base, imageUrl: img || null, context_en: les.en || null, context_tl: les.tl || null } });
       setLessonSaved(true);
+      refreshPacks?.();
     } catch (e) { setErr(e.message); }
     setBusy(false);
   }
